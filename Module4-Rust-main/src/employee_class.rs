@@ -36,7 +36,7 @@ pub fn employee_struct_class(){
 
     let mut employee2 = Employee {
         name: String::from("Alan Wake"),
-        salary: 100000.0,
+        salary: 70000.0,
         id: 2,
         employee_type: EmployeeType::SeniorEngineer,
     };
