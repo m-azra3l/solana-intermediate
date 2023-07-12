@@ -27,7 +27,13 @@ impl Processor {
                 msg!("Instruction: InitEscrow");
                 Self::process_init_escrow(accounts, amount, program_id)
             }
+
             //WRITE YOUR CODE BELOW
+
+            EscrowInstruction::Exchange { amount } => {
+                msg!("Instruction: Exchange");
+                Self::process_exchange(accounts, amount, program_id)
+            }
         }
     }
 
@@ -44,9 +50,10 @@ impl Processor {
         }
         
         //Use the iterator as above and get the account info - store in the variable temp_token_account
-        
-        
+        let temp_token_account = next_account_info(account_info_iter)?;
+
         //Use the iterator as above and get the account info - store in the variable token_to_receive_account
+        let token_to_receive_account = next_account_info(account_info_iter)?;
         
 
         if *token_to_receive_account.owner != spl_token::id() {
@@ -62,13 +69,18 @@ impl Processor {
 
         //Use the iterator as above and get the account info - store in the variable escrow_account
         //One catch here - Escrow account should be mutable
+        let escrow_account = next_account_info(account_info_iter)?;
 
         if escrow_info.is_initialized() {
             return Err(ProgramError::AccountAlreadyInitialized);
         }
 
         //Populate the Escrow Information here in the "escrow_info" struct
-        
+        escrow_info.is_initialized = true;
+        escrow_info.initializer_pubkey = *initializer.key;
+        escrow_info.temp_token_account_pubkey = *temp_token_account.key;
+        escrow_info.initializer_token_to_receive_account_pubkey = *token_to_receive_account.key;
+        escrow_info.expected_amount = amount;
 
         Escrow::pack(escrow_info, &mut escrow_account.try_borrow_mut_data()?)?;
         let (pda, _nonce) = Pubkey::find_program_address(&[b"escrow"], program_id);
