@@ -15,7 +15,7 @@
         SeniorEngineer,
     }
 
-    // Implement a method to add salaries to the employee type
+    // Implement a method to add and subtract salaries
     impl Employee {
         fn add_salaries(&mut self, amount: f64) {
             self.salary += amount;
@@ -26,7 +26,8 @@
     }
 
 pub fn employee_struct_class(){   
-    // Create an instance of the Employee struct
+    // Create instances of the Employee struct for both 
+    // enployee types
     let mut employee1 = Employee {
         name: String::from("John Doe"),
         salary: 50000.0,
@@ -48,6 +49,8 @@ pub fn employee_struct_class(){
     employee2.sub_salaries(10000.0);
 
     // Print the updated employee information
+    
+    println!("=============================================");  
     println!("Employee 1:");
     println!("Name: {}", employee1.name);
     println!("Salary: ${:.2}", employee1.salary);
@@ -58,5 +61,6 @@ pub fn employee_struct_class(){
     println!("Name: {}", employee2.name);
     println!("Salary: ${:.2}", employee2.salary);
     println!("ID: {}", employee2.id);
-    println!("Employee Type: {:?}", employee2.employee_type);
+    println!("Employee Type: {:?}", employee2.employee_type);    
+    println!("=============================================");  
 }
