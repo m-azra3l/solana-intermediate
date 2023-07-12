@@ -1,7 +1,7 @@
 pub fn variables_example() {
     // declare a variable with value 1
-    let mut x = 1;
-    println!("x = {}", x);
+    let mut a = 1;
+    println!("a = {}", a);
 
     //Integers
     let myint1 = 10;
@@ -21,8 +21,8 @@ pub fn variables_example() {
 
 
     // change the value of variable x
-    x = 2;    
-    println!("x = {}", x);
+    a = 2;    
+    println!("a = {}", a);
     println!("myint1 = {}", myint1);
     println!("myint2 = {}", myint2);
     println!("fl1 = {}", fl1);
@@ -31,4 +31,22 @@ pub fn variables_example() {
     println!("fl3 = {}", fl3);
     println!("cr1 = {}", cr1);
     println!("cr2 = {}", cr2);
+
+    //Tuples
+    let tup = (4,5,6);
+
+    //Accessing Tuple
+    let (x,y,z) = tup; //x=4, y=5, z=6
+
+    let first_element = tup.0;
+    let second_element = tup.1;
+    let third_element = tup.2;
+
+    //Arrays
+    let arr = [6,7,9,10,11];
+
+    let arr1 = [1.2, 3.3, 4.2];
+
+    //Accessing array elements
+    let first_element = arr[0];
 }
