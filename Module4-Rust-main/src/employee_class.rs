@@ -30,7 +30,7 @@ pub fn employee_struct_class(){
     // enployee types
     let mut employee1 = Employee {
         name: String::from("John Doe"),
-        salary: 50000.0,
+        salary: 40000.0,
         id: 1,
         employee_type: EmployeeType::JuniorEngineer,
     };
