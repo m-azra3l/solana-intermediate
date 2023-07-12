@@ -48,5 +48,16 @@ pub fn variables_example() {
     let arr1 = [1.2, 3.3, 4.2];
 
     //Accessing array elements
-    let first_element = arr[0];
+    let first_element_array = arr[0];
+    let second_element_array = arr1[0];
+    println!("x: {}", x);
+    println!("y: {}", y);
+    println!("z: {}", z);
+
+    println!("first_element: {}", first_element);
+    println!("second_element: {}", second_element);
+    println!("third_element: {}", third_element);
+
+    println!("first_element_array: {}", first_element_array);
+    println!("second_element_array: {}", second_element_array);
 }
