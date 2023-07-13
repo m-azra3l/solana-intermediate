@@ -130,11 +130,11 @@ mod tests {
             Epoch::default(),
         );
         let mut instruction_data = vec![0; 17];
-        
+
         // Test addition operation
         instruction_data[0] = 0;
-        let num1 = 3.5;
-        let num2 = 2.0;
+        let num1: f64 = 3.5; // Specify f64 type
+        let num2: f64 = 2.0; // Specify f64 type
         instruction_data[1..9].copy_from_slice(&num1.to_le_bytes());
         instruction_data[9..17].copy_from_slice(&num2.to_le_bytes());
 
@@ -146,8 +146,8 @@ mod tests {
 
         // Test subtraction operation
         instruction_data[0] = 1;
-        let num1 = 5.7;
-        let num2 = 2.5;
+        let num1: f64 = 5.7; // Specify f64 type
+        let num2: f64 = 2.5; // Specify f64 type
         instruction_data[1..9].copy_from_slice(&num1.to_le_bytes());
         instruction_data[9..17].copy_from_slice(&num2.to_le_bytes());
 
