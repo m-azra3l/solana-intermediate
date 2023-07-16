@@ -6,10 +6,6 @@ declare_id!("9vVwobbUQKqweePif76gvLBgg3uR12P8Ssae2x73kkFp");
 pub mod counter_program {
     use super::*;
 
-    pub fn initialize(ctx: Context<Initialize>) -> Result<()> {
-        Ok(())
-    }
-
     pub fn create(ctx: Context<Create>) -> Result<()> {
         ctx.accounts.counter.authority = ctx.accounts.authority.key();
         ctx.accounts.counter.count = 0;
@@ -18,13 +14,10 @@ pub mod counter_program {
     }
 
     pub fn increment(ctx: Context<Increment>) -> Result<()> {
-        // TODO
+        ctx.accounts.counter.count += 1;
         Ok(())
     }
 }
-
-#[derive(Accounts)]
-pub struct Initialize {}
 
 #[derive(Accounts)]
 pub struct Create<'info> {
@@ -35,10 +28,16 @@ pub struct Create<'info> {
     pub system_program: Program<'info, System>
 }
 
+#[derive(Accounts)]
+pub struct Increment<'info> {
+    #[account(mut, has_one = authority)]
+    pub counter: Account<'info, Counter>,
+    pub authority: Signer<'info>,
+}
+
 #[account]
 pub struct Counter {
     pub authority: Pubkey,
     pub count: u64,
 }
-
 
