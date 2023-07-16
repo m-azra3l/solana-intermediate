@@ -22,4 +22,26 @@ describe("counter-program", () => {
     .rpc()
     console.log("Your transaction signature", tx)
   });
+
+  it("Increment Counter!", async () => {
+    const tx = await program.methods.increment()
+    .accounts({
+      counter: counter.publicKey,
+      authority: provider.wallet.publicKey,
+    })
+    .signers([counter])
+    .rpc()
+    console.log("Your transaction signature:", tx);
+  });
+
+  it("Decrement Counter!", async () => {
+    const tx = await program.methods.decrement()
+    .accounts({
+      counter: counter.publicKey,
+      authority: provider.wallet.publicKey,
+    })
+    .signers([counter])
+    .rpc()
+    console.log("Your transaction signature:", tx);
+  });
 });
