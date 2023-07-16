@@ -17,6 +17,11 @@ pub mod counter_program {
         ctx.accounts.counter.count += 1;
         Ok(())
     }
+
+    pub fn decrement(ctx: Context<Decrement>) -> Result<()> {
+        ctx.accounts.counter.count -= 1;
+        Ok(())
+    }    
 }
 
 #[derive(Accounts)]
@@ -30,6 +35,13 @@ pub struct Create<'info> {
 
 #[derive(Accounts)]
 pub struct Increment<'info> {
+    #[account(mut, has_one = authority)]
+    pub counter: Account<'info, Counter>,
+    pub authority: Signer<'info>,
+}
+
+#[derive(Accounts)]
+pub struct Decrement<'info> {
     #[account(mut, has_one = authority)]
     pub counter: Account<'info, Counter>,
     pub authority: Signer<'info>,
