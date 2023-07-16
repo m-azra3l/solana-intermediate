@@ -26,7 +26,7 @@ pub mod counter_program {
 
 #[derive(Accounts)]
 pub struct Create<'info> {
-    #[account(init, payer = authority, space = <space needed in bytes>)]
+    #[account(init, payer = authority, space = 8 + 40)]
     pub counter: Account<'info, Counter>,
     #[account(mut)]
     pub authority: Signer<'info>,
