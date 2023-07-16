@@ -8,7 +8,7 @@ counter_program = "9vVwobbUQKqweePif76gvLBgg3uR12P8Ssae2x73kkFp"
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "Localnet"
+cluster = "https://api.devnet.solana.com"
 wallet = "C:\\Users\\gadre\\.config/solana/id.json"
 
 [scripts]
