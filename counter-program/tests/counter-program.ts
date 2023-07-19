@@ -13,7 +13,7 @@ describe("counter-program", () => {
   const program = anchor.workspace.CounterProgram as Program<CounterProgram>;
 
   // Create a keypair for the counter account
-  let counter = Keypair.generate();
+  const counter = Keypair.generate();
 
   // Test case to create a Counter account
   it("Create Counter account!", async () => {
