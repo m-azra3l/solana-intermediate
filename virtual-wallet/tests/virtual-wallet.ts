@@ -41,7 +41,9 @@ describe("virtual-wallet", () => {
       systemProgram: SystemProgram.programId
     })
     .rpc();
+    console.log("=================================================================");
     console.log("Virtual Wallet Initialized!");
     console.log("Your transaction signature", tx);
+    console.log("=================================================================");
   });
 });
