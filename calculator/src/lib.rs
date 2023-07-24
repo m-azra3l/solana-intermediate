@@ -35,7 +35,8 @@ pub fn process_instruction(
     if account.owner != program_id {
         msg!("Creating calculator account");
         let data = &mut account.data.borrow_mut();
-        let mut calculator_account = CalculatorAccount { result: 0.0 };
+        // let mut calculator_account = CalculatorAccount { result: 0.0 };
+        let calculator_account = CalculatorAccount { result: 0.0 };
         calculator_account
             .serialize(&mut &mut data[..])
             .map_err(|_| ProgramError::InvalidAccountData)?;
