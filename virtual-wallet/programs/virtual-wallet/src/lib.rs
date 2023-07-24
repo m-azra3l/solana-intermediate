@@ -16,7 +16,7 @@ pub mod virtual_wallet {
         ctx.accounts.dedit_card.checking = 0;
         ctx.accounts.dedit_card.savings = 0;
 
-        msg!("Initialized virtual wallet");
+        msg!("Virtual Wallet Initialized!");
         msg!("Credit card limit: {}", ctx.accounts.credit_card.credit_limit);
         Ok(())
     }
