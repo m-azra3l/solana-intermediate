@@ -1,6 +1,7 @@
 [workspace]
 members = [
-    "programs/note-taker"
+    "programs/note-taker",
+    "programs/notes",
 ]
 
 [profile.release]
