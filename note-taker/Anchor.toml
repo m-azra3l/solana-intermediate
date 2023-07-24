@@ -3,12 +3,12 @@ seeds = false
 skip-lint = false
 [programs.localnet]
 note_taker = "53zmMMp7wu2XJhCj1M17mNgH1c3j9KwmEffXyTNEgkh7"
+notes = "D4vXUMbHSF3Qj6ChxsZpnNxNXVFEQTy4aPmhuWjnQZJk"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-# cluster = "https://api.devnet.solana.com"
 cluster = "Localnet"
 wallet = "wallet.json"
 
