@@ -8,8 +8,9 @@ virtual_wallet = "AaJUVVD4yTR1j6EgyP1ZvVTiTVpk8wXk21p4twaFZkrn"
 url = "https://api.apr.dev"
 
 [provider]
+# cluster = "https://api.devnet.solana.com"
 cluster = "Localnet"
-wallet = "/home/azrael_work/.config/solana/id.json"
+wallet = "wallet.json"
 
 [scripts]
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
