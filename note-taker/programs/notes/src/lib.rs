@@ -6,8 +6,17 @@ declare_id!("D4vXUMbHSF3Qj6ChxsZpnNxNXVFEQTy4aPmhuWjnQZJk");
 pub mod notes {
     use super::*;
 
-    pub fn write_note(ctx: Context<WriteNote>) -> Result<()> {
+    pub fn write_note(ctx: Context<WriteNote>, note: String) -> Result<()> {
+
         msg!("Creating a note inside notes program...");
+
+        let new_note = &mut ctx.accounts.note;
+        new_note.authority = ctx.accounts.authority.key;
+        new_note.note = note;
+
+        msg!("Note: {}", new_note.note);
+        msg!("Note Authority: {}", new_note.authority);
+        
         Ok(())
     }
 }
