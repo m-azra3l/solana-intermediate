@@ -9,6 +9,7 @@ notes = "D4vXUMbHSF3Qj6ChxsZpnNxNXVFEQTy4aPmhuWjnQZJk"
 url = "https://api.apr.dev"
 
 [provider]
+# cluster = "https://api.devnet.solana.com"
 cluster = "Localnet"
 wallet = "wallet.json"
 
