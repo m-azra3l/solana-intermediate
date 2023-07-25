@@ -11,7 +11,7 @@ pub mod notes {
         msg!("Creating a note inside notes program...");
 
         let new_note = &mut ctx.accounts.note;
-        new_note.authority = ctx.accounts.authority.key;
+        new_note.authority = ctx.accounts.authority.key();
         new_note.note = note;
 
         msg!("Note: {}", new_note.note);
@@ -22,7 +22,7 @@ pub mod notes {
 }
 
 #[derive(Accounts)]
-pub struct WriteNote {
+pub struct WriteNote<'info> {
     #[account(mut)]
     pub authority: Signer<'info>,
 
