@@ -911,6 +911,7 @@ name = "note-taker"
 version = "0.1.0"
 dependencies = [
  "anchor-lang",
+ "notes",
 ]
 
 [[package]]
