@@ -9,7 +9,7 @@ describe("note-taker", () => {
 
   const program = anchor.workspace.NoteTaker as Program<NoteTaker>;
   const provider = anchor.AnchorProvider.env()
-  const notesProgram = new PublicKey("<program_id-of-your-notes-program>")
+  const notesProgram = new PublicKey("D4vXUMbHSF3Qj6ChxsZpnNxNXVFEQTy4aPmhuWjnQZJk")
 
   const message = "Hello Metacrafter!"
   const note = Keypair.generate()
