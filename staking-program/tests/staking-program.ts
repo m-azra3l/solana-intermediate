@@ -1,19 +1,18 @@
 import * as anchor from '@project-serum/anchor';
-import { Program } from '@project-serum/anchor';
 import { Token, TOKEN_PROGRAM_ID } from '@solana/spl-token';
-import { Keypair, PublicKey, SystemProgram } from '@solana/web3.js';
-import assert from "assert";
+import { SystemProgram } from '@solana/web3.js';
+import assert from 'assert';
 
 import { StakingProgram } from '../target/types/staking_program';
 
 describe('staking-program', () => {
   // Configure the client to use the local cluster.
-  anchor.setProvider(anchor.Provider.env());
+  anchor.setProvider(anchor.AnchorProvider.env());
 
-  const program = anchor.workspace.StakingProgram as Program<StakingProgram>;
-  const mintAuthority = Keypair.generate();
-  let mint: PublicKey;
-  let pool: PublicKey;
+  const program = anchor.workspace.StakingProgram as anchor.Program<StakingProgram>;
+  const mintAuthority = anchor.web3.Keypair.generate();
+  let mint: anchor.web3.PublicKey;
+  let pool: anchor.web3.PublicKey;
 
   before(async () => {
     // Create a new mint.
@@ -21,24 +20,30 @@ describe('staking-program', () => {
       program.provider,
       mintAuthority.publicKey,
       null,
-      0,
+      null,
       TOKEN_PROGRAM_ID,
       SystemProgram.programId
     );
 
     // Create a new pool.
-    const newPoolTx = new anchor.web3.Transaction();
-    const newPoolIx = await program.account.pool.createInstruction(pool, 1000);
-    newPoolTx.add(newPoolIx);
-    await program.provider.send(newPoolTx);
+    pool = anchor.web3.Keypair.generate().publicKey;
+    await program.rpc.new_pool(new anchor.BN(0), {
+      accounts: {
+        pool,
+        owner: program.provider.wallet.publicKey,
+        mint,
+        systemProgram: SystemProgram.programId,
+      },
+      signers: [mintAuthority],
+    });
   });
 
   it('stakes and unstakes tokens', async () => {
-    const user = Keypair.generate();
+    const user = anchor.web3.Keypair.generate();
     const amount = new anchor.BN(100);
 
     // Create a new token account for the user.
-    const userTokenAccount = await Token.createAssociatedTokenAccount(
+    const userTokenAccount = await Token.getAssociatedTokenAddress(
       TOKEN_PROGRAM_ID,
       program.programId,
       mint,
@@ -59,39 +64,41 @@ describe('staking-program', () => {
     // Stake the tokens.
     await program.rpc.stake(amount, {
       accounts: {
-        poolSpt: pool,
+        stakingPool: pool,
         from: userTokenAccount,
-        user: user.publicKey,
-        pool: pool,
+        user: program.provider.wallet.publicKey,
         staker: userTokenAccount,
         tokenProgram: TOKEN_PROGRAM_ID,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
+      signers: [user],
     });
 
     // Check that the user's staked amount is correct.
-    const userStakeAccount = await program.account.stakeAccount.fetch(
+    const userStakeAccount = await program.account.staker.fetch(
       user.publicKey,
-      'state_account'
+      userTokenAccount,
     );
-    assert.equal(userStakeAccount.amount.toNumber(), amount.toNumber());
+    assert.equal(userStakeAccount.staked_balance.toNumber(), amount.toNumber());
 
     // Unstake the tokens.
     await program.rpc.unstake(amount, {
       accounts: {
-        poolSpt: pool,
+        stakingPool: pool,
         from: userTokenAccount,
-        user: user.publicKey,
-        pool: pool,
+        user: program.provider.wallet.publicKey,
         staker: userTokenAccount,
         tokenProgram: TOKEN_PROGRAM_ID,
+        rent: anchor.web3.SYSVAR_RENT_PUBKEY,
       },
+      signers: [user],
     });
 
     // Check that the user's staked amount is now 0.
-    const updatedUserStakeAccount = await program.account.stakeAccount.fetch(
+    const updatedUserStakeAccount = await program.account.staker.fetch(
       user.publicKey,
-      'state_account'
+      userTokenAccount,
     );
-    assert.equal(updatedUserStakeAccount.amount.toNumber(), 0);
+    assert.equal(updatedUserStakeAccount.staked_balance.toNumber(), 0);
   });
 });
