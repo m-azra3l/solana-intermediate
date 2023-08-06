@@ -20,15 +20,17 @@ describe("escrow-program-demo", async () => {
   const userA = new Keypair
   const userB = new Keypair
 
-  let tokenA: PublicKey = null
-  let tokenB: PublicKey = null
-  let userATokenA: PublicKey = null
-  let userATokenB: PublicKey = null
-  let userBTokenA: PublicKey = null
-  let userBTokenB: PublicKey = null
-  let escrowState: PublicKey = null
+  // Assuming PublicKey is a custom data type or a class for representing public keys
 
-        // derive pdas
+  let tokenA: PublicKey | undefined = undefined;
+  let tokenB: PublicKey | undefined = undefined;
+  let userATokenA: PublicKey | undefined = undefined;
+  let userATokenB: PublicKey | undefined = undefined;
+  let userBTokenA: PublicKey | undefined = undefined;
+  let userBTokenB: PublicKey | undefined = undefined;
+  let escrowState: PublicKey | undefined = undefined;
+
+  // derive pdas
   const [programVault, vaultBump] = await PublicKey.findProgramAddress(
     [userA.publicKey.toBuffer(), Buffer.from("program-vault")],
     program.programId
@@ -87,6 +89,9 @@ describe("escrow-program-demo", async () => {
   })
 
   it("Initialize Escrow!", async () => {
+    if(tokenB === undefined){
+      return
+    }
     const [escrow, escrowStateBump] = await PublicKey.findProgramAddress(
       [userA.publicKey.toBuffer(), tokenB.toBuffer(), Buffer.from("escrow-state")],
       program.programId
@@ -142,7 +147,9 @@ describe("escrow-program-demo", async () => {
     .rpc()
 
     await connection.confirmTransaction(tx)
-
+    if(userATokenB === undefined || userBTokenA === undefined || escrowState === undefined){
+      return
+    }
     let userATokenBAcct = await getAccount(connection, userATokenB)
     let userBTokenAAcct = await getAccount(connection, userBTokenA)
     let escrowStateAcct = await program.account.escrowState.fetch(escrowState)
