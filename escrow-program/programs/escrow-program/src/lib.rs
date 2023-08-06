@@ -1,7 +1,6 @@
 use {
     anchor_lang::prelude::*,
     anchor_spl::token::{TokenAccount, Mint, Token, Transfer, CloseAccount, close_account, transfer},
-    
 };
 
 declare_id!("3x4iPCKfqTRLN13UbS5oSNk2j57u8yNHawyuyJjG9Ep6");
