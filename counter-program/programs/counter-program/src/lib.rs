@@ -66,4 +66,3 @@ pub struct Counter {
     pub authority: Pubkey,
     pub count: u64,
 }
-
