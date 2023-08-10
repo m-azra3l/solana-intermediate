@@ -59,7 +59,6 @@ pub struct Decrement<'info> {
     pub authority: Signer<'info>,
 }
 
-
 // Struct to represent the counter account
 #[account]
 pub struct Counter {
