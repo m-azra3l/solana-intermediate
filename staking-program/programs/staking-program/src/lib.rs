@@ -1,163 +1,270 @@
 use{
     anchor_lang::prelude::*,
-    anchor_spl::token::{self, Mint, Token, TokenAccount, Transfer},
-    solana_program::{
-        entrypoint::ProgramResult,
-        program::invoke_signed
+    anchor_spl::{
+        token::{Mint,  MintTo, Token, TokenAccount, Transfer},
+        associated_token::AssociatedToken
     }
-}
+};
 
 declare_id!("4wNomB8Ncca1ddQTSp9V9L4tV8bkS4nkHHWyMBZSTFNQ");
 
 #[program]
 pub mod staking_program {
+    use anchor_spl::token::{mint_to, transfer};
+
     use super::*;
 
-    pub fn new_pool(ctx: Context<NewPool>, bump: u8) -> ProgramResult {
-        let pool = &mut ctx.accounts.pool;
-        pool.bump = bump;
-        pool.mint = *ctx.accounts.mint.to_account_info().key;
-        pool.owner = *ctx.accounts.owner.key;
-
-        // Initialize the staking pool token account with PDA as the authority.
-        let seeds = &[b"staking_pool", &pool.mint.as_ref(), &[pool.bump]];
-        let (staking_pool_key, bump) = Pubkey::find_program_address(seeds, ctx.program_id);
-
-        let create_account_ix = token::create_account(
-            &ctx.accounts.token_program.key,
-            &ctx.accounts.owner.key,
-            &staking_pool_key,
-            &ctx.accounts.pool_spt.key,
-            &bump,
-            token::Token::get_minimum_balance_for_rent_exemption(&ctx.accounts.token_program)?,
-            token::Mint::LEN as u64,
-            &ctx.program_id,
-        )?;
-
-        invoke_signed(
-            &create_account_ix,
-            &[ctx.accounts.token_program.clone(), ctx.accounts.owner.clone()],
-            &[&seeds],
-        )?;
-
+    #[allow(unused)]
+    pub fn initialize_mint(ctx: Context<InitializeMint>, decimals: u8) -> Result<()> {
+        msg!("Created token account {}", ctx.accounts.token_mint.key());
         Ok(())
     }
 
-    pub fn stake(ctx: Context<Stake>, amount: u64) -> ProgramResult {
-        // Transfer tokens from the user's token account to the program's token account.
-        let cpi_accounts = Transfer {
-            from: ctx.accounts.from.to_account_info().clone(),
-            to: ctx.accounts.staking_pool.to_account_info().clone(),
-            authority: ctx.accounts.user.to_account_info().clone(),
-        };
-        let cpi_program = ctx.accounts.token_program.to_account_info().clone();
-        let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
-        token::transfer(cpi_ctx, amount)?;
+    pub fn airdrop(ctx: Context<Airdrop>, amount: u64) -> Result<()> {
+        // Generate mint authority seeds and signer
+        let mint_bump = *ctx.bumps.get("mint_authority").unwrap();
+        let mint_seeds = &["mint-authority".as_bytes(), &[mint_bump]];
+        let signer = &[&mint_seeds[..]];
 
-        // Update the user's staked balance in their additional account.
-        ctx.accounts.staker.staked_balance += amount;
-        Ok(())
-    }
+        msg!("Airdropping {} tokens", amount);
+        let mint_to_ctx = ctx.accounts.mint_to_ctx().with_signer(signer);
+        let result = mint_to(mint_to_ctx, amount);
 
-    pub fn unstake(ctx: Context<Unstake>, amount: u64) -> ProgramResult {
-        // Ensure the user has staked enough tokens to unstake.
-        if amount > ctx.accounts.staker.staked_balance {
-            return Err(ErrorCode::InsufficientStake.into());
+        if result.is_err() {
+            let error = result.err().unwrap();
+            msg!("Airdrop failed: {}", error);
+        } else {
+            msg!("Airdrop completed successfully.");
         }
 
-        // Transfer tokens from the program's token account to the user's token account.
-        let cpi_accounts = Transfer {
-            from: ctx.accounts.staking_pool.to_account_info().clone(),
-            to: ctx.accounts.from.to_account_info().clone(),
-            authority: ctx.accounts.pool_spt.to_account_info().clone(),
-        };
-        let cpi_program = ctx.accounts.token_program.to_account_info().clone();
-        let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
-        token::transfer(cpi_ctx, amount)?;
+        Ok(())
+    }
 
-        // Update the user's staked balance in their additional account.
-        ctx.accounts.staker.staked_balance -= amount;
+    pub fn stake(ctx: Context<Staking>, amount: u64) -> Result<()> {
+        // Check if the user has enough tokens to stake
+        if ctx.accounts.user_token_account.amount < amount {
+            return err!(ProgramErrors::UserInsufficientTokenBalance);
+        }
+
+        // Transfer tokens from user to staking vault
+        let transfer_ctx = ctx.accounts.transfer_to_vault_ctx();
+        let result = transfer(transfer_ctx, amount);
+
+        if result.is_err() {
+            let error = result.err().unwrap();
+            msg!("Staking failed: {}", error);
+        } else {
+            msg!("Staking completed successfully.");
+        }
+
+        // Update user's stake amount
+        ctx.accounts.user_stake.amount += amount;
+
+        Ok(())
+    }
+
+    pub fn unstake(ctx: Context<Staking>, amount: u64) -> Result<()> {
+        // Check if the user has enough staked tokens to unstake
+        if ctx.accounts.user_stake.amount < amount {
+            return err!(ProgramErrors::UnstakingTooManyTokens);
+        }
+
+        // Generate staking authority seeds and signer
+        let staking_bump = *ctx.bumps.get("staking_authority").unwrap();
+        let staking_seeds = &["staking-authority".as_bytes(), &[staking_bump]];
+        let signer = &[&staking_seeds[..]];
+
+        // Transfer tokens from staking vault to user
+        let transfer_ctx = ctx.accounts.transfer_to_user_ctx().with_signer(signer);
+        let result = transfer(transfer_ctx, amount);
+
+        if result.is_err() {
+            let error = result.err().unwrap();
+            msg!("Unstaking failed: {}", error);
+        } else {
+            msg!("Unstaking completed successfully.");
+        }
+
+        // Update user's stake amount
+        ctx.accounts.user_stake.amount -= amount;
+
         Ok(())
     }
 }
 
+// Define custom error codes
+#[error_code]
+pub enum ProgramErrors {
+    UserInsufficientTokenBalance,
+    UnstakingTooManyTokens,
+}
+
 #[derive(Accounts)]
-pub struct NewPool<'info> {
-    #[account(init, payer = owner, seeds = ['pool.as_bytes(), &[bump]])]
-    pool: Account<'info, Pool>,
-    owner: Signer<'info>,
-    system_program: Program<'info, System>,
-    #[account(constraint = mint.mint_authority.get()? == pool.to_account_info().key)]
-    mint: CpiAccount<'info, Mint>,
-    pool_spt: Account<'info, TokenAccount>,
-    #[account(signer)]
-    rent: Sysvar<'info, Rent>,
+#[instruction(decimals:u8)]
+pub struct InitializeMint<'info> {
+    #[account(
+        init, 
+        mint::authority = mint_authority,
+        mint::decimals = decimals, 
+        seeds = ["token-mint".as_bytes()], 
+        bump, 
+        payer=payer)]
+    pub token_mint: Account<'info, Mint>,
+    #[account(seeds = ["mint-authority".as_bytes()], bump)]
+    /// CHECK: using as signer
+    pub mint_authority: AccountInfo<'info>,
+    #[account(seeds = ["staking-authority".as_bytes()], bump)]
+    /// CHECK: using as signer
+    pub staking_authority: AccountInfo<'info>,
+    #[account(
+        init,
+        payer = payer,
+        associated_token::mint = token_mint,
+        associated_token::authority = staking_authority,
+    )]
+    pub staking_token_account: Account<'info, TokenAccount>,
+    #[account(mut)]
+    pub payer: Signer<'info>,
+    pub rent: Sysvar<'info, Rent>,
+    pub token_program: Program<'info, Token>,
+    pub system_program: Program<'info, System>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
+}
+
+#[derive(Accounts)]
+pub struct Airdrop<'info> {
+    #[account(mut, seeds = ["token-mint".as_bytes()], bump)]
+    pub token_mint: Account<'info, Mint>,
+    #[account(mut, seeds = ["mint-authority".as_bytes()], bump)]
+    /// CHECK: using as signer
+    pub mint_authority: AccountInfo<'info>,
+    #[account(mut)]
+    pub user: Signer<'info>,
+    #[account(
+        init_if_needed,
+        payer = user,
+        associated_token::mint = token_mint,
+        associated_token::authority = user,
+    )]
+    pub user_token_account: Account<'info, TokenAccount>,
+    pub rent: Sysvar<'info, Rent>,
+    pub token_program: Program<'info, Token>,
+    pub system_program: Program<'info, System>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
+}
+
+impl<'info> Airdrop<'info> {
+    /// Creates a CPI context for the `MintTo` instruction, enabling token minting.
+    /// This function configures the CPI context required to execute the `MintTo` instruction
+    /// for transferring tokens from the mint to the user's token account.
+    ///
+    /// Returns:
+    /// - A configured CPI context for the `MintTo` instruction.
+    pub fn mint_to_ctx(&self) -> CpiContext<'_, '_, '_, 'info, MintTo<'info>> {
+        // Get the target program to execute the CPI on
+        let cpi_program = self.token_program.to_account_info();
+
+        // Define the accounts involved in the `MintTo` instruction
+        let cpi_accounts = MintTo {
+            // The mint account from which tokens are being minted
+            mint: self.token_mint.to_account_info(),
+            // The target user's token account to receive the minted tokens
+            to: self.user_token_account.to_account_info(),
+            // The authority controlling the minting process
+            authority: self.mint_authority.to_account_info(),
+        };
+
+        // Create a CPI context for the `MintTo` instruction
+        CpiContext::new(cpi_program, cpi_accounts)
+    }
+}
+
+#[derive(Accounts)]
+pub struct Staking<'info> {
+    #[account(mut, seeds = ["token-mint".as_bytes()], bump)]
+    pub token_mint: Account<'info, Mint>,
+    #[account(seeds = ["staking-authority".as_bytes()], bump)]
+    /// CHECK: using as signer
+    pub staking_authority: AccountInfo<'info>,
+    #[account(
+        mut,
+        associated_token::mint = token_mint, 
+        associated_token::authority = staking_authority
+    )]
+    pub staking_token_account: Account<'info, TokenAccount>,
+    #[account(mut)]
+    pub user: Signer<'info>,
+    #[account(
+        mut, 
+        associated_token::mint = token_mint, 
+        associated_token::authority = user
+    )]
+    pub user_token_account: Account<'info, TokenAccount>,
+    #[account(
+        init_if_needed,
+        payer = user,
+        seeds = [user.key().as_ref(), "state_account".as_bytes()],
+        bump,
+        space = 8 + 8 + 32
+    )]
+    pub user_stake: Account<'info, Stake>,
+    pub rent: Sysvar<'info, Rent>,
+    pub token_program: Program<'info, Token>,
+    pub system_program: Program<'info, System>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
 }
 
 #[account]
-pub struct Pool {
-    bump: u8,
-    mint: Pubkey,
-    owner: Pubkey,
+pub struct Stake{
+    pub amount: u64
 }
 
-#[derive(Accounts)]
-pub struct Stake<'info> {
-    #[account(mut, has_one = mint)]
-    staking_pool: Account<'info, TokenAccount>,
+impl<'info> Staking<'info> {
+    // Creates a CPI context for the `Transfer` instruction to move tokens from user to vault.
+    // This function configures the CPI context required to execute the `Transfer` instruction
+    // for moving tokens from the user's token account to the staking vault.
+    //
+    // Returns:
+    // - A configured CPI context for the `Transfer` instruction.
+    pub fn transfer_to_vault_ctx(&self) -> CpiContext<'_, '_, '_, 'info, Transfer<'info>> {
+        // Get the target program to execute the CPI on
+        let cpi_program = self.token_program.to_account_info();
 
-    #[account(mut, has_one = mint)]
-    from: Account<'info, TokenAccount>,
+        // Define the accounts involved in the `Transfer` instruction
+        let cpi_accounts = Transfer {
+            // Source token account from which tokens are transferred (user's account)
+            from: self.user_token_account.to_account_info(),
+            // Destination token account where tokens are deposited (staking vault)
+            to: self.staking_token_account.to_account_info(),
+            // The authority controlling the token transfer (user)
+            authority: self.user.to_account_info(),
+        };
 
-    // Has to be signer to send tokens from.
-    #[account(signer)]
-    user: AccountInfo<'info>,
+        // Create a CPI context for the `Transfer` instruction
+        CpiContext::new(cpi_program, cpi_accounts)
+    }
 
-    #[account(
-        init_if_needed,
-        associated_token::authority,
-        with = staking_pool,
-    )]
-    staker: Account<'info, Staker>,
+    // Creates a CPI context for the `Transfer` instruction to move tokens from vault to user.
+    // This function configures the CPI context required to execute the `Transfer` instruction
+    // for moving tokens from the staking vault back to the user's token account.
+    //
+    // Returns:
+    // - A configured CPI context for the `Transfer` instruction.
+    pub fn transfer_to_user_ctx(&self) -> CpiContext<'_, '_, '_, 'info, Transfer<'info>> {
+        // Get the target program to execute the CPI on
+        let cpi_program = self.token_program.to_account_info();
 
-    // Programs needed for CPI.
-    token_program: Program<'info, Token>,
-    rent: Sysvar<'info, Rent>,
-    system_program: Program<'info, System>,
-}
+        // Define the accounts involved in the `Transfer` instruction
+        let cpi_accounts = Transfer {
+            // Source token account from which tokens are transferred (staking vault)
+            from: self.staking_token_account.to_account_info(),
+            // Destination token account where tokens are deposited (user's account)
+            to: self.user_token_account.to_account_info(),
+            // The authority controlling the token transfer (staking authority)
+            authority: self.staking_authority.to_account_info(),
+        };
 
-#[account]
-pub struct Staker {
-    staked_balance: u64,
-}
-
-#[derive(Accounts)]
-pub struct Unstake<'info> {
-    #[account(mut, has_one = mint)]
-    staking_pool: Account<'info, TokenAccount>,
-
-    #[account(mut, has_one = mint)]
-    from: Account<'info, TokenAccount>,
-
-    // Has to be signer to send tokens from.
-    #[account(signer)]
-    user: AccountInfo<'info>,
-
-    #[account(
-        init_if_needed,
-        associated_token::authority,
-        with = staking_pool,
-    )]
-    staker: Account<'info, Staker>,
-
-    // Programs needed for CPI.
-    token_program: Program<'info, Token>,
-    rent: Sysvar<'info, Rent>,
-    system_program: Program<'info, System>,
-}
-
-#[error]
-pub enum ErrorCode {
-    #[msg("Insufficient stake amount")]
-    InsufficientStake,
+        // Create a CPI context for the `Transfer` instruction
+        CpiContext::new(cpi_program, cpi_accounts)
+    }
 }
